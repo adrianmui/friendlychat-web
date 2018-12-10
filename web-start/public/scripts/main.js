@@ -54,22 +54,18 @@ function isUserSignedIn() {
   return !!firebase.auth().currentUser;
 }
 
-// Loads chat messages history and listens for upcoming ones.
-function loadMessages() {
-  // TODO 7: Load and listens for new messages.
-  const cb = ({ key, node_ }) => {
-    const { name, text, profilePicUrl, imageUrl } = node_.val();
-    displayMessage(key, name, text, profilePicUrl, imageUrl)
-  }
-
-  firebase.database().ref('/messages').limitToLast(12).on('child_added', cb);
-  firebase.database().ref('/messages').limitToLast(12).on('child_changed', cb);
-    
-}
-
 // Saves a new message on the Firebase DB.
-function saveMessage(messageText) {
+async function saveMessage(messageText) {
   // TODO 8: Push a new message to Firebase.
+  try {
+    firebase.database().ref('/messages').push({
+      name: getUserName(),
+      text: messageText,
+      profilePicUrl: getProfilePicUrl(),
+    })
+  } catch (e) {
+    console.log(e.message);
+  }
 }
 
 // Saves a new message containing an image in Firebase.
@@ -287,5 +283,17 @@ mediaCaptureElement.addEventListener('change', onMediaFileSelected);
 // initialize Firebase
 initFirebaseAuth();
 
+// listeners  
+
 // We load currently existing chat messages and listen to new ones.
-loadMessages();
+firebase.database().ref('/messages').limitToLast(12).on('child_added', ({ key, _node}) => {
+  const { name, text, profilePicUrl, imageUrl } = node_.val();
+  console.log(`child_added: key: ${key}, messagee: ${text}`);
+  displayMessage(key, name, text, profilePicUrl, imageUrl);
+});
+firebase.database().ref('/messages').limitToLast(12).on('child_changed', ({ key, _node }) => {
+  const { name, text, profilePicUrl, imageUrl } = node_.val();
+  console.log(`child_changed: key: ${key}, message: ${text}`);
+  displayMessage(key, name, text, profilePicUrl, imageUrl);
+});
+  
