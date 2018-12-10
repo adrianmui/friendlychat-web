@@ -72,6 +72,8 @@ async function saveMessage(messageText) {
 // This first saves the image in Firebase storage.
 async function saveImageMessage(file) {
   console.log(`saveImageMessage: ${file.name}`);
+
+  let nodeKey;
   // TODO 9: Posts a new image as a message.
   try {
     const messageRef = await firebase.database().ref('/messages').push({
@@ -80,7 +82,8 @@ async function saveImageMessage(file) {
       profilePicUrl: getProfilePicUrl(),
       message: file.name,
     })
-    
+    nodeKey = messageRef.key;
+
     const filePath = `${firebase.auth().currentUser.uid}/${messageRef.key}/${file.name}`
 
     const fileSnapShot = await firebase.storage().ref(filePath).put(file)
@@ -90,6 +93,13 @@ async function saveImageMessage(file) {
     messageRef.update({ imageUrl, storageUri: fileSnapShot.metadata.fullPath })
   } catch (e) {
     console.log(e.message);
+    console.log(`removing child node with key: ${nodeKey}`)
+    try { 
+      await firebase.database().ref('/messages').child(nodeKey).remove();
+    } catch (e) {
+      console.log('error system failure. please try again.')
+    }
+    console.log('error capture success');
   }
 }
 
@@ -212,6 +222,12 @@ function addSizeToGoogleProfilePic(url) {
 // A loading image URL.
 var LOADING_IMAGE_URL = 'https://www.google.com/images/spin-32.gif?a';
 
+// removes a message in UI
+function removeMessage(key) {
+  console.log(`removing dom with id: ${key}`)
+  document.getElementById(key).remove();
+}
+
 // Displays a Message in the UI.
 function displayMessage(key, name, text, picUrl, imageUrl) {
   var div = document.getElementById(key);
@@ -305,7 +321,10 @@ initFirebaseAuth();
 // listeners  
 
 // We load currently existing chat messages and listen to new ones.
-firebase.database().ref('/messages').limitToLast(12).on('child_added', function ({ key, node_ }) {
+firebase.database().ref('/messages').on('child_removed', function ({ key }) {
+  removeMessage(key)
+})
+firebase.database().ref('/messages').on('child_added', function ({ key, node_ }) {
   const { name, text, profilePicUrl, imageUrl } = node_.val();
   console.log(`child_added: key: ${key}, messagee: ${text}`);
   displayMessage(key, name, text, profilePicUrl, imageUrl);
