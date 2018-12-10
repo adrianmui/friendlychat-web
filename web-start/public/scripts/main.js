@@ -57,6 +57,14 @@ function isUserSignedIn() {
 // Loads chat messages history and listens for upcoming ones.
 function loadMessages() {
   // TODO 7: Load and listens for new messages.
+  const cb = ({ key, node_ }) => {
+    const { name, text, profilePicUrl, imageUrl } = node_.val();
+    displayMessage(key, name, text, profilePicUrl, imageUrl)
+  }
+
+  firebase.database().ref('/messages').limitToLast(12).on('child_added', cb);
+  firebase.database().ref('/messages').limitToLast(12).on('child_changed', cb);
+    
 }
 
 // Saves a new message on the Firebase DB.
