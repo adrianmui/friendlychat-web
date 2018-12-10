@@ -70,8 +70,27 @@ async function saveMessage(messageText) {
 
 // Saves a new message containing an image in Firebase.
 // This first saves the image in Firebase storage.
-function saveImageMessage(file) {
+async function saveImageMessage(file) {
+  console.log(`saveImageMessage: ${file.name}`);
   // TODO 9: Posts a new image as a message.
+  try {
+    const messageRef = await firebase.database().ref('/messages').push({
+      name: getUserName(),
+      imageUrl: LOADING_IMAGE_URL,
+      profilePicUrl: getProfilePicUrl(),
+      message: file.name,
+    })
+    
+    const filePath = `${firebase.auth().currentUser.uid}/${messageRef.key}/${file.name}`
+
+    const fileSnapShot = await firebase.storage().ref(filePath).put(file)
+    const imageUrl = await fileSnapShot.ref.getDownloadURL()
+
+
+    messageRef.update({ imageUrl, storageUri: fileSnapShot.metadata.fullPath })
+  } catch (e) {
+    console.log(e.message);
+  }
 }
 
 // Saves the messaging device token to the datastore.
@@ -286,12 +305,12 @@ initFirebaseAuth();
 // listeners  
 
 // We load currently existing chat messages and listen to new ones.
-firebase.database().ref('/messages').limitToLast(12).on('child_added', ({ key, _node}) => {
+firebase.database().ref('/messages').limitToLast(12).on('child_added', function ({ key, node_ }) {
   const { name, text, profilePicUrl, imageUrl } = node_.val();
   console.log(`child_added: key: ${key}, messagee: ${text}`);
   displayMessage(key, name, text, profilePicUrl, imageUrl);
 });
-firebase.database().ref('/messages').limitToLast(12).on('child_changed', ({ key, _node }) => {
+firebase.database().ref('/messages').limitToLast(12).on('child_changed', function ({ key, node_ }) {
   const { name, text, profilePicUrl, imageUrl } = node_.val();
   console.log(`child_changed: key: ${key}, message: ${text}`);
   displayMessage(key, name, text, profilePicUrl, imageUrl);
